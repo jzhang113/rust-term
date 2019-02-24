@@ -38,19 +38,11 @@ fn main() {
         }
 
         t += 0.1;
-        rt.set_ext('X' as u8, 1, t, 1, t, 3, Color(130, 88, 250, 255));
+        rt.set_ext('X' as u8, 1, t, 1, t, 3, Color(255, 0, 0, 255));
 
         rt.events_loop.poll_events(|e| match e {
             glutin::Event::WindowEvent { event, .. } => match event {
                 glutin::WindowEvent::CloseRequested => closed = true,
-                glutin::WindowEvent::KeyboardInput { input, .. } => match input {
-                    glutin::KeyboardInput {
-                        virtual_keycode, ..
-                    } => match virtual_keycode {
-                        Some(glutin::VirtualKeyCode::C) => clear = true,
-                        _ => println!("pressed {:?}", virtual_keycode),
-                    },
-                },
                 _ => (),
             },
             _ => (),

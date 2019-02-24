@@ -129,15 +129,21 @@ impl Term {
         );
         target.finish().unwrap();
 
-        self.vertices.clear();
-        self.indices.clear();
+        self.reset();
     }
 
     pub fn set_back_color(&mut self, col: crate::color::Color) {
         self.back_color = col.to_floats();
     }
 
+    fn reset(&mut self) {
+        self.indices.clear();
+        self.vertices.clear();
+        self.count = 0;
+    }
+
     pub fn render(&mut self) {
+        self.reset();
         let buf = self.front.clone();
 
         for z in 0..buf.len {
