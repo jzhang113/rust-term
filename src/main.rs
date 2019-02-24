@@ -21,11 +21,17 @@ fn main() {
             let b = rng.gen_range(0, 255);
             let color = Color(r, g, b, 255);
 
-            rt.set(x, y, color, color);
+            rt.set(((y * 80 + x) % 255) as u8, x, y, color, color);
         }
     }
 
-    rt.set(0, 0, Color(255, 0, 0, 255), Color(255, 0, 0, 255));
+    rt.set(
+        'b' as u8,
+        0,
+        0,
+        Color(255, 0, 0, 255),
+        Color(255, 0, 0, 255),
+    );
 
     let mut closed = false;
     while !closed {

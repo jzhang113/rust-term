@@ -5,7 +5,7 @@ pub(crate) struct Cell {
     pub color: Color,
     pub dx: f64,
     pub dy: f64,
-    pub code: u32,
+    pub code: u8,
 }
 
 #[derive(Clone)]
@@ -27,7 +27,7 @@ impl Cell {
             color: Color(0, 0, 0, 255),
             dx: 0.0,
             dy: 0.0,
-            code: '\0',
+            code: 0,
         }
     }
 }

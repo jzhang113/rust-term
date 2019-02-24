@@ -75,10 +75,11 @@ impl Term {
         }
     }
 
-    pub fn set(&mut self, code: u32, x: u32, y: u32, fcol: Color, bcol: Color) {
+    // TODO: handle codes over 255
+    pub fn set(&mut self, code: u8, x: u32, y: u32, fcol: Color, bcol: Color) {
         let index = (y * self.width + x) as usize;
         // TODO: how to double buffer?
-        let tile = &self.front.cells[index];
+        let tile = &mut self.front.cells[index];
         tile.color = fcol;
         tile.code = code;
     }
@@ -178,26 +179,33 @@ impl Term {
         ];
 
         let sxt = 1.0 / 16.0;
+        let row = 16 - (cell.code / 16);
+        let col = cell.code % 16;
+
+        let tex_left = sxt * f64::from(col);
+        let tex_right = sxt * f64::from(col + 1);
+        let tex_top = sxt * f64::from(row);
+        let tex_bottom = sxt * f64::from(row - 1);
 
         // set up vertices + texcoords
         &self.vertices.push(Vertex {
             position: [left, top],
-            tex_coords: [sxt, 9.0 * sxt],
+            tex_coords: [tex_left, tex_top],
             shade_color: shade_color,
         });
         &self.vertices.push(Vertex {
             position: [left, bottom],
-            tex_coords: [sxt, 10.0 * sxt],
+            tex_coords: [tex_left, tex_bottom],
             shade_color: shade_color,
         });
         &self.vertices.push(Vertex {
             position: [right, bottom],
-            tex_coords: [2.0 * sxt, 10.0 * sxt],
+            tex_coords: [tex_right, tex_bottom],
             shade_color: shade_color,
         });
         &self.vertices.push(Vertex {
             position: [right, top],
-            tex_coords: [2.0 * sxt, 9.0 * sxt],
+            tex_coords: [tex_right, tex_top],
             shade_color: shade_color,
         });
 
