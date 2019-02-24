@@ -8,8 +8,7 @@ use crate::layer::Layer;
 use crate::lib::Color;
 
 pub struct Term {
-    front: Layer,
-    back: Layer,
+    front: Layer, // TODO: add back layer for double buffering
     back_color: [f32; 4],
     width: u32,
     height: u32,
@@ -62,7 +61,6 @@ impl Term {
 
         Term {
             front: Layer::new(size),
-            back: Layer::new(size),
             back_color: [0.0, 0.0, 0.0, 0.0],
             width: width,
             height: height,
@@ -78,11 +76,15 @@ impl Term {
     }
 
     // TODO: handle codes over 255
-    pub fn set(&mut self, code: u8, x: u32, y: u32, fcol: Color, bcol: Color) {
+    pub fn set(&mut self, code: u8, x: u32, y: u32, z: u8, col: Color) {
         let index = (y * self.width + x) as usize;
-        // TODO: how to double buffer?
-        let tile = &mut self.front.cells[index];
-        tile.color = fcol;
+
+        while z >= self.front.cells.len() as u8 {
+            self.front.add_layer();
+        }
+
+        let tile = &mut self.front.cells[z as usize][index];
+        tile.color = col;
         tile.code = code;
     }
 
@@ -91,13 +93,18 @@ impl Term {
     }
 
     pub fn render(&mut self) {
-        // TODO: double buffer
         let buf = self.front.clone();
 
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let index = (y * self.width + x) as usize;
-                self.draw_cell(&buf.cells[index], x, y)
+        for z in 0..buf.len {
+            for y in 0..self.height {
+                for x in 0..self.width {
+                    let index = (y * self.width + x) as usize;
+                    let cell = &buf.cells[z as usize][index];
+
+                    if cell.code != 0 {
+                        self.draw_cell(cell, x, y);
+                    }
+                }
             }
         }
 
@@ -137,13 +144,12 @@ impl Term {
             out vec4 color;
 
             uniform sampler2D tex;
-            uniform vec4 back_color;
 
             void main() {
                 color = texture(tex, old_tex_coords);                
 
                 if (color.xyz == vec3(1, 0, 1))
-                     color = back_color;
+                     color = vec4(0, 0, 0, 0);
                 else
                      color = old_color * color;
             }
@@ -158,7 +164,12 @@ impl Term {
         .unwrap();
 
         let mut target = self.display.draw();
-        target.clear_color(self.back_color[0], self.back_color[1], self.back_color[2], self.back_color[3]);
+        target.clear_color(
+            self.back_color[0],
+            self.back_color[1],
+            self.back_color[2],
+            self.back_color[3],
+        );
         target
             .draw(
                 &vertex_buffer,
@@ -166,9 +177,11 @@ impl Term {
                 &program,
                 &uniform! {
                     tex: &self.texture,
-                    back_color: self.back_color,
                 },
-                &Default::default(),
+                &glium::DrawParameters {
+                    blend: glium::draw_parameters::Blend::alpha_blending(),
+                    ..Default::default()
+                },
             )
             .unwrap();
         target.finish().unwrap();

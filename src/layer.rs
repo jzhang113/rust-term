@@ -10,15 +10,9 @@ pub(crate) struct Cell {
 
 #[derive(Clone)]
 pub(crate) struct Layer {
-    pub cells: Vec<Cell>,
-}
-
-impl Layer {
-    pub fn new(size: usize) -> Layer {
-        Layer {
-            cells: vec![Cell::new(); size],
-        }
-    }
+    pub cells: Vec<Vec<Cell>>,
+    size: usize,
+    pub len: u8,
 }
 
 impl Cell {
@@ -29,5 +23,20 @@ impl Cell {
             dy: 0.0,
             code: 0,
         }
+    }
+}
+
+impl Layer {
+    pub fn new(size: usize) -> Layer {
+        Layer {
+            cells: vec![vec![Cell::new(); size]],
+            size: size,
+            len: 1,
+        }
+    }
+
+    pub fn add_layer(&mut self) {
+        self.cells.push(vec![Cell::new(); self.size]);
+        self.len += 1;
     }
 }
