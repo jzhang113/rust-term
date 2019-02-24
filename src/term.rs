@@ -107,6 +107,24 @@ impl Term {
         tile.dy = dy;
     }
 
+    pub fn clear(&mut self) {
+        for layer in 0..self.front.len {
+            &self.front.clear_layer(layer);
+        }
+
+        let mut target = self.display.draw();
+        target.clear_color(
+            self.back_color[0],
+            self.back_color[1],
+            self.back_color[2],
+            self.back_color[3],
+        );
+        target.finish().unwrap();
+
+        self.vertices.clear();
+        self.indices.clear();
+    }
+
     pub fn set_back_color(&mut self, col: Color) {
         self.back_color = col.to_floats();
     }

@@ -39,4 +39,10 @@ impl Layer {
         self.cells.push(vec![Cell::new(); self.size]);
         self.len += 1;
     }
+
+    pub fn clear_layer(&mut self, layer: u8) {
+        for i in 0..self.size {
+            self.cells[layer as usize][i as usize].code = 0;
+        }
+    }
 }
