@@ -3,9 +3,9 @@ use crate::lib::Color;
 #[derive(Copy, Clone)]
 pub(crate) struct Cell {
     pub color: Color,
-    pub dx: f32,
-    pub dy: f32,
-    pub code: char,
+    pub dx: f64,
+    pub dy: f64,
+    pub code: u32,
 }
 
 #[derive(Clone)]

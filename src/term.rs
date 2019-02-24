@@ -12,26 +12,29 @@ pub struct Term {
     back: Layer,
     width: u32,
     height: u32,
-    cell_width: f32,
-    cell_height: f32,
+    cell_width: f64,
+    cell_height: f64,
+    count: u32,
     vertices: Vec<Vertex>,
-    events_loop: glutin::EventsLoop,
+    indices: Vec<u32>,
+    texture: glium::Texture2d,
     display: glium::Display,
+    pub events_loop: glutin::EventsLoop,
 }
 
 #[derive(Copy, Clone)]
 struct Vertex {
-    position: [f32; 2],
-    tex_coords: [f32; 2],
+    position: [f64; 2],
+    tex_coords: [f64; 2],
     shade_color: [f32; 4],
 }
 
 implement_vertex!(Vertex, position, tex_coords, shade_color);
 
 impl Term {
-    pub fn new(width: u32, height: u32, cell_width: f32, cell_height: f32) -> Term {
-        let tot_width = (width as f32) * cell_width;
-        let tot_height = (height as f32) * cell_height;
+    pub fn new(width: u32, height: u32, cell_width: f64, cell_height: f64) -> Term {
+        let tot_width = f64::from(width) * cell_width;
+        let tot_height = f64::from(height) * cell_height;
         let size = (width * height) as usize;
 
         let events_loop = glutin::EventsLoop::new();
@@ -45,6 +48,17 @@ impl Term {
         let context = glutin::ContextBuilder::new();
         let display = glium::Display::new(window, context, &events_loop).unwrap();
 
+        // get texture
+        // TODO: load image from a given path
+        use std::io::Cursor;
+        let image = image::load(Cursor::new(&include_bytes!("tileset.png")[..]), image::PNG)
+            .unwrap()
+            .to_rgba();
+        let image_dimensions = image.dimensions();
+        let image =
+            glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+        let texture = glium::texture::Texture2d::new(&display, image).unwrap();
+
         Term {
             front: Layer::new(size),
             back: Layer::new(size),
@@ -52,41 +66,42 @@ impl Term {
             height: height,
             cell_width: cell_width,
             cell_height: cell_height,
+            count: 0,
             vertices: vec![],
+            indices: vec![],
+            texture: texture,
             events_loop: events_loop,
             display: display,
         }
     }
 
-    pub fn set(&mut self, x: u32, y: u32, fcol: Color, bcol: Color) {
+    pub fn set(&mut self, code: u32, x: u32, y: u32, fcol: Color, bcol: Color) {
         let index = (y * self.width + x) as usize;
         // TODO: how to double buffer?
-        self.front.cells[index].color = fcol;
+        let tile = &self.front.cells[index];
+        tile.color = fcol;
+        tile.code = code;
     }
 
     pub fn render(&mut self) {
         // TODO: double buffer
-        let buf = &self.front;
+        let buf = self.front.clone();
 
         for y in 0..self.height {
             for x in 0..self.width {
                 let index = (y * self.width + x) as usize;
-                self::Term::draw_cell(
-                    &mut self.vertices,
-                    &buf.cells[index],
-                    x,
-                    y,
-                    self.cell_width,
-                    self.cell_height,
-                )
+                self.draw_cell(&buf.cells[index], x, y)
             }
         }
 
-        // build vertex buffers
+        // build vertex and index buffers
         let vertex_buffer = glium::VertexBuffer::new(&self.display, &self.vertices).unwrap();
-
-        // TODO: compute index buffer
-        let indices = glium::index::NoIndices(glium::index::PrimitiveType::TriangleStrip);
+        let indices = glium::index::IndexBuffer::new(
+            &self.display,
+            glium::index::PrimitiveType::TrianglesList,
+            &self.indices,
+        )
+        .unwrap();
 
         let vertex_shader_src = r#"
             #version 140
@@ -117,8 +132,7 @@ impl Term {
             uniform sampler2D tex;
 
             void main() {
-                // color = texture(tex, old_tex_coords);
-                color = old_color;
+                color = old_color * texture(tex, old_tex_coords);
             }
         "#;
 
@@ -137,25 +151,23 @@ impl Term {
                 &vertex_buffer,
                 &indices,
                 &program,
-                &glium::uniforms::EmptyUniforms,
+                &uniform! {
+                    tex: &self.texture
+                },
                 &Default::default(),
             )
             .unwrap();
         target.finish().unwrap();
     }
 
-    fn draw_cell(
-        vertices: &mut Vec<Vertex>,
-        cell: &Cell,
-        x: u32,
-        y: u32,
-        cell_width: f32,
-        cell_height: f32,
-    ) {
-        let left = (x as f32) * cell_width + cell.dx;
-        let top = (y as f32) * cell_height + cell.dy;
-        let right = left + cell_width + cell.dx;
-        let bottom = top + cell_height + cell.dy;
+    fn draw_cell(&mut self, cell: &Cell, x: u32, y: u32) {
+        let tot_width = f64::from(self.width) * self.cell_width;
+        let tot_height = f64::from(self.height) * self.cell_height;
+
+        let left = (f64::from(x) * self.cell_width + cell.dx) * 2.0 / tot_width - 1.0;
+        let bottom = (f64::from(y) * self.cell_height + cell.dy) * 2.0 / tot_height - 1.0;
+        let right = left + (cell.dx + self.cell_width) * 2.0 / tot_width;
+        let top = bottom + (cell.dy + self.cell_height) * 2.0 / tot_height;
 
         let Color(r, g, b, a) = cell.color;
         let shade_color = [
@@ -165,26 +177,37 @@ impl Term {
             f32::from(a) / 255.0,
         ];
 
+        let sxt = 1.0 / 16.0;
+
         // set up vertices + texcoords
-        vertices.push(Vertex {
+        &self.vertices.push(Vertex {
             position: [left, top],
-            tex_coords: [0.0, 1.0],
+            tex_coords: [sxt, 9.0 * sxt],
             shade_color: shade_color,
         });
-        vertices.push(Vertex {
+        &self.vertices.push(Vertex {
             position: [left, bottom],
-            tex_coords: [0.0, 1.0],
+            tex_coords: [sxt, 10.0 * sxt],
             shade_color: shade_color,
         });
-        vertices.push(Vertex {
+        &self.vertices.push(Vertex {
             position: [right, bottom],
-            tex_coords: [0.0, 1.0],
+            tex_coords: [2.0 * sxt, 10.0 * sxt],
             shade_color: shade_color,
         });
-        vertices.push(Vertex {
+        &self.vertices.push(Vertex {
             position: [right, top],
-            tex_coords: [0.0, 1.0],
+            tex_coords: [2.0 * sxt, 9.0 * sxt],
             shade_color: shade_color,
         });
+
+        &self.indices.push(self.count + 0);
+        &self.indices.push(self.count + 1);
+        &self.indices.push(self.count + 2);
+        &self.indices.push(self.count + 0);
+        &self.indices.push(self.count + 2);
+        &self.indices.push(self.count + 3);
+
+        self.count += 4;
     }
 }
