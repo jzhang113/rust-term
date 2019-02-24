@@ -9,7 +9,7 @@ use crate::term::layer::Cell;
 use crate::term::layer::Layer;
 
 pub struct Term {
-    front: Layer, // TODO: add back layer for double buffering
+    front: Layer,
     back_color: [f32; 4],
     pub width: u32,
     pub height: u32,
@@ -82,12 +82,13 @@ impl Term {
     // TODO: handle codes over 255
     pub fn set(&mut self, code: u8, x: u32, y: u32, z: u8, col: crate::color::Color) {
         let index = (y * self.width + x) as usize;
+        let zindex = z as usize;
 
         while z >= self.front.cells.len() as u8 {
             self.front.add_layer();
         }
 
-        let tile = &mut self.front.cells[z as usize][index];
+        let tile = &mut self.front.cells[zindex][index];
         tile.color = col;
         tile.code = code;
     }
@@ -103,12 +104,13 @@ impl Term {
         col: crate::color::Color,
     ) {
         let index = (y * self.width + x) as usize;
+        let zindex = z as usize;
 
         while z >= self.front.cells.len() as u8 {
             self.front.add_layer();
         }
 
-        let tile = &mut self.front.cells[z as usize][index];
+        let tile = &mut self.front.cells[zindex][index];
         tile.color = col;
         tile.code = code;
         tile.dx = dx;
@@ -119,15 +121,6 @@ impl Term {
         for layer in 0..self.front.len {
             &self.front.clear_layer(layer);
         }
-
-        let mut target = self.display.draw();
-        target.clear_color(
-            self.back_color[0],
-            self.back_color[1],
-            self.back_color[2],
-            self.back_color[3],
-        );
-        target.finish().unwrap();
 
         self.reset();
     }

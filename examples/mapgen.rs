@@ -87,7 +87,7 @@ fn main() {
             _ => (),
         });
 
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        std::thread::sleep(std::time::Duration::from_millis(16));
     }
 }
 
