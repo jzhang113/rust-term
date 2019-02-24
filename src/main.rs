@@ -11,7 +11,7 @@ use glium::glutin;
 use rand::Rng;
 
 fn main() {
-    let mut rt = term::Term::new(80, 40, 12.0, 12.0);
+    let mut rt = term::Term::new("tileset.png", 80, 40, 12.0, 12.0);
     let mut rng = rand::thread_rng();
 
     rt.set_back_color(Color(40, 80, 190, 255));
@@ -36,7 +36,7 @@ fn main() {
     while !closed {
         rt.render();
 
-        t += 0.5;
+        t += 0.1;
         rt.set_ext('X' as u8, 1, t, 1, t, 3, Color(130, 88, 250, 255));
 
         rt.events_loop.poll_events(|e| match e {

@@ -2,6 +2,8 @@ extern crate image;
 
 use glium::glutin;
 use glium::Surface;
+use std::fs::File;
+use std::io::prelude::*;
 
 use crate::layer::Cell;
 use crate::layer::Layer;
@@ -32,7 +34,7 @@ struct Vertex {
 implement_vertex!(Vertex, position, tex_coords, shade_color);
 
 impl Term {
-    pub fn new(width: u32, height: u32, cell_width: f64, cell_height: f64) -> Term {
+    pub fn new(path: &str, width: u32, height: u32, cell_width: f64, cell_height: f64) -> Term {
         let tot_width = f64::from(width) * cell_width;
         let tot_height = f64::from(height) * cell_height;
         let size = (width * height) as usize;
@@ -43,15 +45,18 @@ impl Term {
                 tot_width.into(),
                 tot_height.into(),
             ))
-            .with_title("Hello world");
+            .with_title("rust-term");
 
         let context = glutin::ContextBuilder::new();
         let display = glium::Display::new(window, context, &events_loop).unwrap();
 
         // get texture
-        // TODO: load image from a given path
-        use std::io::Cursor;
-        let image = image::load(Cursor::new(&include_bytes!("tileset.png")[..]), image::PNG)
+        // TODO: don't unwrap, handle errors better
+        let mut f = File::open(path).unwrap();
+        let mut buffer = Vec::new();
+        f.read_to_end(&mut buffer).unwrap();
+
+        let image = image::load(std::io::Cursor::new(&buffer), image::PNG)
             .unwrap()
             .to_rgba();
         let image_dimensions = image.dimensions();
