@@ -32,8 +32,12 @@ fn main() {
     rt.set('^' as u8, 0, 0, 2, Color(255, 0, 0, 255));
 
     let mut closed = false;
+    let mut t = 0.0;
     while !closed {
         rt.render();
+
+        t += 0.5;
+        rt.set_ext('X' as u8, 1, t, 1, t, 3, Color(130, 88, 250, 255));
 
         rt.events_loop.poll_events(|e| match e {
             glutin::Event::WindowEvent { event, .. } => match event {

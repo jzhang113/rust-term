@@ -10,10 +10,10 @@ use crate::lib::Color;
 pub struct Term {
     front: Layer, // TODO: add back layer for double buffering
     back_color: [f32; 4],
-    width: u32,
-    height: u32,
-    cell_width: f64,
-    cell_height: f64,
+    pub width: u32,
+    pub height: u32,
+    pub cell_width: f64,
+    pub cell_height: f64,
     count: u32,
     vertices: Vec<Vertex>,
     indices: Vec<u32>,
@@ -86,6 +86,20 @@ impl Term {
         let tile = &mut self.front.cells[z as usize][index];
         tile.color = col;
         tile.code = code;
+    }
+
+    pub fn set_ext(&mut self, code: u8, x: u32, dx: f64, y: u32, dy: f64, z: u8, col: Color) {
+        let index = (y * self.width + x) as usize;
+
+        while z >= self.front.cells.len() as u8 {
+            self.front.add_layer();
+        }
+
+        let tile = &mut self.front.cells[z as usize][index];
+        tile.color = col;
+        tile.code = code;
+        tile.dx = dx;
+        tile.dy = dy;
     }
 
     pub fn set_back_color(&mut self, col: Color) {
@@ -191,10 +205,10 @@ impl Term {
         let tot_width = f64::from(self.width) * self.cell_width;
         let tot_height = f64::from(self.height) * self.cell_height;
 
-        let left = (f64::from(x) * self.cell_width + cell.dx) * 2.0 / tot_width - 1.0;
-        let bottom = (f64::from(y) * self.cell_height + cell.dy) * 2.0 / tot_height - 1.0;
-        let right = left + (cell.dx + self.cell_width) * 2.0 / tot_width;
-        let top = bottom + (cell.dy + self.cell_height) * 2.0 / tot_height;
+        let left = (f64::from(x) + cell.dx) * self.cell_width * 2.0 / tot_width - 1.0;
+        let bottom = (f64::from(y) + cell.dy) * self.cell_height * 2.0 / tot_height - 1.0;
+        let right = left + self.cell_width * 2.0 / tot_width;
+        let top = bottom + self.cell_height * 2.0 / tot_height;
 
         let shade_color = cell.color.to_floats();
 
