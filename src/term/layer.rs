@@ -1,4 +1,4 @@
-use crate::lib::Color;
+use crate::color::Color;
 
 #[derive(Copy, Clone)]
 pub(crate) struct Cell {
@@ -6,13 +6,6 @@ pub(crate) struct Cell {
     pub dx: f64,
     pub dy: f64,
     pub code: u8,
-}
-
-#[derive(Clone)]
-pub(crate) struct Layer {
-    pub cells: Vec<Vec<Cell>>,
-    size: usize,
-    pub len: u8,
 }
 
 impl Cell {
@@ -24,6 +17,13 @@ impl Cell {
             code: 0,
         }
     }
+}
+
+#[derive(Clone)]
+pub(crate) struct Layer {
+    pub cells: Vec<Vec<Cell>>,
+    pub size: usize,
+    pub len: u8,
 }
 
 impl Layer {

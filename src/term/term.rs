@@ -5,9 +5,8 @@ use glium::Surface;
 use std::fs::File;
 use std::io::prelude::*;
 
-use crate::layer::Cell;
-use crate::layer::Layer;
-use crate::lib::Color;
+use crate::term::layer::Cell;
+use crate::term::layer::Layer;
 
 pub struct Term {
     front: Layer, // TODO: add back layer for double buffering
@@ -25,10 +24,10 @@ pub struct Term {
 }
 
 #[derive(Copy, Clone)]
-struct Vertex {
-    position: [f64; 2],
-    tex_coords: [f64; 2],
-    shade_color: [f32; 4],
+pub(crate) struct Vertex {
+    pub position: [f64; 2],
+    pub tex_coords: [f64; 2],
+    pub shade_color: [f32; 4],
 }
 
 implement_vertex!(Vertex, position, tex_coords, shade_color);
@@ -81,7 +80,7 @@ impl Term {
     }
 
     // TODO: handle codes over 255
-    pub fn set(&mut self, code: u8, x: u32, y: u32, z: u8, col: Color) {
+    pub fn set(&mut self, code: u8, x: u32, y: u32, z: u8, col: crate::color::Color) {
         let index = (y * self.width + x) as usize;
 
         while z >= self.front.cells.len() as u8 {
@@ -93,7 +92,16 @@ impl Term {
         tile.code = code;
     }
 
-    pub fn set_ext(&mut self, code: u8, x: u32, dx: f64, y: u32, dy: f64, z: u8, col: Color) {
+    pub fn set_ext(
+        &mut self,
+        code: u8,
+        x: u32,
+        dx: f64,
+        y: u32,
+        dy: f64,
+        z: u8,
+        col: crate::color::Color,
+    ) {
         let index = (y * self.width + x) as usize;
 
         while z >= self.front.cells.len() as u8 {
@@ -125,7 +133,7 @@ impl Term {
         self.indices.clear();
     }
 
-    pub fn set_back_color(&mut self, col: Color) {
+    pub fn set_back_color(&mut self, col: crate::color::Color) {
         self.back_color = col.to_floats();
     }
 
