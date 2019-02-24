@@ -10,6 +10,7 @@ use crate::lib::Color;
 pub struct Term {
     front: Layer,
     back: Layer,
+    back_color: [f32; 4],
     width: u32,
     height: u32,
     cell_width: f64,
@@ -62,6 +63,7 @@ impl Term {
         Term {
             front: Layer::new(size),
             back: Layer::new(size),
+            back_color: [0.0, 0.0, 0.0, 0.0],
             width: width,
             height: height,
             cell_width: cell_width,
@@ -82,6 +84,10 @@ impl Term {
         let tile = &mut self.front.cells[index];
         tile.color = fcol;
         tile.code = code;
+    }
+
+    pub fn set_back_color(&mut self, col: Color) {
+        self.back_color = col.to_floats();
     }
 
     pub fn render(&mut self) {
@@ -131,9 +137,15 @@ impl Term {
             out vec4 color;
 
             uniform sampler2D tex;
+            uniform vec4 back_color;
 
             void main() {
-                color = old_color * texture(tex, old_tex_coords);
+                color = texture(tex, old_tex_coords);                
+
+                if (color.xyz == vec3(1, 0, 1))
+                     color = back_color;
+                else
+                     color = old_color * color;
             }
         "#;
 
@@ -146,14 +158,15 @@ impl Term {
         .unwrap();
 
         let mut target = self.display.draw();
-        target.clear_color(0.0, 0.0, 0.0, 1.0);
+        target.clear_color(self.back_color[0], self.back_color[1], self.back_color[2], self.back_color[3]);
         target
             .draw(
                 &vertex_buffer,
                 &indices,
                 &program,
                 &uniform! {
-                    tex: &self.texture
+                    tex: &self.texture,
+                    back_color: self.back_color,
                 },
                 &Default::default(),
             )
@@ -170,13 +183,7 @@ impl Term {
         let right = left + (cell.dx + self.cell_width) * 2.0 / tot_width;
         let top = bottom + (cell.dy + self.cell_height) * 2.0 / tot_height;
 
-        let Color(r, g, b, a) = cell.color;
-        let shade_color = [
-            f32::from(r) / 255.0,
-            f32::from(g) / 255.0,
-            f32::from(b) / 255.0,
-            f32::from(a) / 255.0,
-        ];
+        let shade_color = cell.color.to_floats();
 
         let sxt = 1.0 / 16.0;
         let row = 16 - (cell.code / 16);
